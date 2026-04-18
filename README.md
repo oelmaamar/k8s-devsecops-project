@@ -55,6 +55,7 @@ git clone https://github.com/oelmaamar/k8s-devsecops-project.git
 
 # Deploy all resources
 kubectl apply -f k8s/
+```
 
 ---
 
@@ -77,3 +78,6 @@ kubectl apply -f k8s/
 
 - 🔒 **Advanced Security (CKS Level)**  
   Implement deeper security practices (Pod Security, runtime security, policies)
+
+---
+
