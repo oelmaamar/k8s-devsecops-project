@@ -55,3 +55,25 @@ git clone https://github.com/oelmaamar/k8s-devsecops-project.git
 
 # Deploy all resources
 kubectl apply -f k8s/
+
+---
+
+## 🗺️ Roadmap & Evolution
+
+- ⚙️ **CI/CD Pipeline**  
+  Implement automated pipelines with image tagging based on Git SHA
+
+- 🔐 **RBAC Implementation**  
+  Define fine-grained access control for secure cluster operations
+
+- 🌐 **Ingress Controller Setup**  
+  Expose services externally with proper routing and TLS
+
+- ☁️ **Infrastructure as Code (Terraform)**  
+  Automate infrastructure provisioning and Kubernetes setup
+
+- 📦 **Helm Packaging**  
+  Package and manage Kubernetes applications with Helm charts
+
+- 🔒 **Advanced Security (CKS Level)**  
+  Implement deeper security practices (Pod Security, runtime security, policies)
