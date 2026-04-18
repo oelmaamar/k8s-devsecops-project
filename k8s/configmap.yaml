@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: devsecops-config
+  name: flask-api-config
+  namespace: devsecops
 data:
-  APP_ENV: "prod"
-  APP_DEBUG: "false"
-  APP_NAME: "devsecops-app"
+  APP_MODE: "prod"
+  APP_NAME: "flask-api"

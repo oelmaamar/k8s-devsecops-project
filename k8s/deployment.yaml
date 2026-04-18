@@ -1,31 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: devsecops-app
+  name: flask-api
+  namespace: devsecops
   labels:
-    app: devsecops-app
+    app: flask-api
+    tier: backend
+    version: v1
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: devsecops-app
+      app: flask-api
   template:
     metadata:
       labels:
-        app: devsecops-app
+        app: flask-api
+        tier: backend
+        version: v1
     spec:
       containers:
-        - name: devsecops-app
-          image: oelmaamar/devsecops-app:latest
-          imagePullPolicy: Always
+        - name: flask-api
+          image: oelmaamar/flask-api:v1.0.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
 
           envFrom:
             - configMapRef:
-                name: devsecops-config
+                name: flask-api-config
             - secretRef:
-                name: devsecops-secret
+                name: flask-api-secret
 
           securityContext:
             allowPrivilegeEscalation: false

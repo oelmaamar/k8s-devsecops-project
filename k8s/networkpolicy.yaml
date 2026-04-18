@@ -1,14 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: devsecops-app-policy
+  name: flask-api-policy
+  namespace: devsecops
 spec:
   podSelector:
     matchLabels:
-      app: devsecops-app
+      app: flask-api
   policyTypes:
     - Ingress
   ingress:
-    - ports:
+    - from:
+        - podSelector: {} 
+      ports:
         - protocol: TCP
           port: 5000
