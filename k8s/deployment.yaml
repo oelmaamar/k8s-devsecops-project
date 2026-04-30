@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flask-api
+  annotations:
+    checkov.io/skip1: CKV_K8S_43=Using image tags is preferred for dev environment
   namespace: devsecops
   labels:
     app: flask-api
@@ -19,24 +21,32 @@ spec:
         tier: backend
         version: v1
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      volumes:
+      - name: secrets-store
+        secret:
+          secretName: flask-api-secret
       containers:
         - name: flask-api
           image: oelmaamar/flask-api:v1.0.0
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
-
+          volumeMounts:
+          - name: secrets-store
+            mountPath: "/etc/secrets"
+            readOnly: true 
           envFrom:
             - configMapRef:
                 name: flask-api-config
-            - secretRef:
-                name: flask-api-secret
 
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 10001
             capabilities:
               drop:
                 - ALL
