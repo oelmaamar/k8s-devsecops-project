@@ -21,6 +21,7 @@ spec:
         tier: backend
         version: v1
     spec:
+      # Pod level security
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -31,6 +32,8 @@ spec:
       - name: secrets-store
         secret:
           secretName: flask-api-secret
+      - name: tmp-volume
+        emptyDir: {}
       containers:
         - name: flask-api
           image: oelmaamar/flask-api:v1.0.0
@@ -41,12 +44,16 @@ spec:
           - name: secrets-store
             mountPath: "/etc/secrets"
             readOnly: true 
+          # tmp directory for flash cache or logs
+          - name: tmp-volume
+            mountPath: /tmp
           envFrom:
             - configMapRef:
                 name: flask-api-config
-
+          # container level security
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # Fixes CKV_K8S_22
             capabilities:
               drop:
                 - ALL
