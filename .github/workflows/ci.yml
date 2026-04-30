@@ -87,14 +87,3 @@ jobs:
           # Dynamically set the new version in the YAML
           sed -i 's|image: .*flask-api:.*|image: ${{ secrets.DOCKER_USERNAME }}/flask-api:${{ needs.build-and-scan.outputs.version }}|g' k8s/deployment.yaml
 
-      - name: Deploy to Kubernetes
-        uses: azure/k8s-set-context@v3
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBECONFIG }}
-
-      - name: Finalize Rollout
-        run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl rollout status deployment/flask-api
