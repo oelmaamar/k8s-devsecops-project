@@ -29,14 +29,18 @@ jobs:
           fetch-depth: 0
 
       # --- 1. STATIC ANALYSIS (SAST) ---
-      # Performs Static Application Security Testing using Bandit.
-      # This tool scans the source code for vulnerabilities before the build stage.
+      # Performs Static Application Security Testing (SAST) using Bandit.
+      # Scans Python source code for common security issues before container build.
       # Reference: https://github.com/PyCQA/bandit
-      - name: Python Security Scan (Bandit)
-        uses: pyupio/bandit-action@master
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          project_path: app/
-          level: high
+          python-version: '3.10'
+
+      - name: Python Security Scan (Bandit)
+        run: |
+          pip install bandit
+          bandit -r app/ -ll
       
 
       # --- 2. INFRASTRUCTURE AS CODE SCAN (IaC) ---
@@ -45,7 +49,7 @@ jobs:
       # Documentation: https://github.com/bridgecrewio/checkov-action
 
       - name: Scan K8s Manifests (Checkov)
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: k8s/
           framework: kubernetes
@@ -93,7 +97,7 @@ jobs:
 
       - name: Container Scan (Trivy)
         if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ fromJson(steps.meta.outputs.json).tags[0] }}
           format: 'table'
@@ -101,7 +105,8 @@ jobs:
           ignore-unfixed: true # don't list unfixed issues
           vuln-type: 'os,library'
           severity: 'CRITICAL'
-    # --- 5. DEPLOY (On local k8s cluster) ---
+          
+      # --- 5. DEPLOY (On local k8s cluster) ---       
       - name: Deploy to Local Cluster
         if: github.event_name != 'pull_request'
         run: |
