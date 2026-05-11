@@ -1,23 +1,28 @@
 # Hardened Kubernetes DevSecOps Showcase
 
-A production-inspired Kubernetes DevSecOps portfolio project designed to demonstrate CKA/CKS-aligned practices, secure CI/CD workflows, and Day-2 operational readiness.
+A production-inspired Kubernetes DevSecOps portfolio project designed to demonstrate Kubernetes administration, secure CI/CD workflows, and Day-2 operational readiness.
 
 ---
 
 ## 🎯 Project Vision
 
-This repository showcases a production-oriented Kubernetes deployment focused on **security, reliability, automation, and operational readiness**.
+This repository showcases a production-oriented Kubernetes DevSecOps platform designed to demonstrate **real-world infrastructure practices**.
 
-The goal is to demonstrate real-world Kubernetes engineering practices beyond simple deployments, including:
+The long-term objective is to build a complete, enterprise-inspired platform covering:
 
-* Kubernetes hardening
-* Secure CI/CD automation
-* Day-2 Operations
-* Infrastructure isolation
-* Immutable deployments
-* DevSecOps best practices
+* **Kubernetes administration (CKA)**
+* **Secure CI/CD automation**
+* **Infrastructure as Code with Terraform**
+* **Cloud-native deployment on AWS**
+* **Day-2 Operations and observability**
+* **Advanced Kubernetes security hardening (CKS roadmap)**
+* **Scalable and secure application delivery**
 
-Built following **CKA / CKS-inspired standards**.
+The platform is being built progressively to reflect a realistic infrastructure evolution:
+
+**Local Kubernetes → Secure CI/CD → Infrastructure as Code → Cloud Migration → Advanced DevSecOps practices**
+
+The current implementation focuses on building a strong Kubernetes and CI/CD foundation before expanding into Terraform, AWS, and advanced CKS-level security.
 
 ---
 
@@ -43,125 +48,137 @@ Cluster provisioning: **kubeadm multi-node architecture**
 * 🔎 **Security Scanning:**
 
   * **Bandit** → Static Application Security Testing (SAST)
-  * **Checkov** → Kubernetes IaC Security Scanning
-  * **Trivy** → Container Vulnerability Scanning
+  * **Checkov** → Kubernetes manifest security scanning
+  * **Trivy** → Container vulnerability scanning
 * 🖥️ **Infrastructure:** Hybrid Linux (CentOS / Ubuntu)
-* 🏷️ **Tagging Strategy:** Immutable image tagging using Git metadata
+* 🏷️ **Image Strategy:** Immutable tagging using Git metadata
 
 ---
 
 ## 🛡️ Implemented Features
 
-### 🔐 Security Hardening (CKS Aligned)
+### 🔐 Kubernetes Security Foundations
 
-* Dedicated Kubernetes namespace isolation (`devsecops`)
-* Network segmentation using **NetworkPolicy**
-* Secrets externalized via **Kubernetes Secrets**
-* Immutable filesystem:
+Implemented baseline Kubernetes security controls that prepare the project for future CKS-level hardening:
 
-```yaml
-readOnlyRootFilesystem: true
-```
+* Dedicated namespace isolation (`devsecops`)
+* Kubernetes Secrets used to externalize sensitive configuration
+* Baseline NetworkPolicy restricting ingress traffic to the Flask API on port `5000`
+* Hardened container runtime configuration:
 
-Container runtime hardening:
-
-```yaml
-runAsNonRoot: true
-runAsUser: 10001
-allowPrivilegeEscalation: false
-capabilities:
-  drop:
-    - ALL
-```
+  * `runAsNonRoot: true`
+  * `runAsUser: 10001`
+  * `allowPrivilegeEscalation: false`
+  * Linux capabilities dropped
 
 ---
 
-### ⚡ Reliability & Performance (CKA Aligned)
+### ⚡ Reliability & Operations
 
-* **Liveness & Readiness probes**
-* **CPU / Memory requests & limits**
+* Liveness and readiness probes
+* CPU and memory requests/limits
 * Declarative Kubernetes manifests
-* Immutable image deployment strategy
 * Rolling deployments with rollout validation
+* Multi-replica deployment on Kubernetes worker node
 
 ---
 
 ## 🔄 CI/CD Pipeline
 
-The project includes a production-inspired CI/CD workflow using **GitHub Actions** and a **self-hosted runner** connected to the Kubernetes cluster.
+The project includes a production-inspired **GitHub Actions CI/CD workflow** using a **self-hosted runner** connected to the local Kubernetes cluster.
 
 ### Pipeline Stages
 
-1. **SAST (Bandit)**
-   Static analysis of Python code
+1. **SAST — Bandit**
+   Static analysis of Python source code.
 
-2. **IaC Security Scan (Checkov)**
-   Kubernetes manifest validation and security checks
+2. **Kubernetes Manifest Security Scan — Checkov**
+   Security validation of Kubernetes YAML manifests.
 
 3. **Container Build**
-   Docker image build using immutable tags
+   Docker image build with immutable tagging.
 
-4. **Container Security Scan (Trivy)**
-   CVE detection for OS packages and Python libraries
+4. **Container Vulnerability Scan — Trivy**
+   CVE detection for OS packages and Python libraries.
 
 5. **Automated Kubernetes Deployment**
-   Deployment to a local kubeadm cluster through a self-hosted runner
+   Deployment to the local kubeadm cluster through a self-hosted runner.
 
 6. **Deployment Validation**
    Rollout verification using:
 
 ```bash
-kubectl rollout status
+kubectl rollout status deployment/flask-api -n devsecops
 ```
 
-This architecture avoids exposing Kubernetes credentials to GitHub-hosted runners while preserving deployment automation.
+This architecture avoids exposing Kubernetes credentials to GitHub-hosted runners while preserving automated deployment workflows.
 
 ---
 
-## 🚀 Deployment Guide
+## 🚀 Deployment Workflow
+
+This project uses a **GitHub Actions CI/CD pipeline** for automated delivery.
+
+### Trigger Deployment
 
 ```bash
-# Clone repository
-git clone https://github.com/oelmaamar/k8s-devsecops-project.git
+git add .
+git commit -m "update application"
+git push origin main
+```
 
-# Deploy namespace
-kubectl apply -f k8s/namespace.yaml
+### Verify Deployment
 
-# Deploy application
-kubectl apply -f k8s/
+```bash
+kubectl get pods -n devsecops
+kubectl get deployment -n devsecops
+kubectl rollout status deployment/flask-api -n devsecops
 ```
 
 ---
 
 ## 🗺️ Roadmap & Evolution
 
-### ☁️ Cloud Migration
-
-Move the platform to AWS infrastructure.
-
-### 🏗️ Infrastructure as Code (Terraform)
-
-Provision infrastructure declaratively.
-
 ### 🔐 RBAC Implementation
 
-Fine-grained Kubernetes access control.
+Introduce fine-grained Kubernetes access control using ServiceAccounts, Roles, and RoleBindings.
 
-### 📦 Helm Packaging
+### 🌐 NetworkPolicy Hardening
 
-Reusable Helm-based application packaging.
+Move from basic ingress restriction to stricter pod-to-pod communication rules.
 
-### 🔒 Advanced Security (CKS Level)
+### 📈 Horizontal Pod Autoscaling
 
-* Pod Security Standards
-* Runtime security hardening
-* Admission policies
+Add HPA to dynamically scale workloads based on resource consumption.
 
 ### 📊 Observability Stack
 
-Prometheus + Grafana + Kubernetes monitoring.
+Add metrics and monitoring with Prometheus and Grafana.
+
+### ☁️ Cloud Migration — AWS
+
+Move the platform from local kubeadm infrastructure to AWS-based Kubernetes infrastructure.
+
+### 🏗️ Infrastructure as Code — Terraform
+
+Provision infrastructure declaratively using Terraform.
+
+### 📦 Helm Packaging
+
+Package the Kubernetes application using reusable Helm charts.
+
+### 🔒 Advanced CKS Hardening
+
+Future CKS-oriented improvements:
+
+* Pod Security Standards
+* Admission policies
+* Runtime security improvements
+* Stronger NetworkPolicies
+* Least-privilege RBAC
+* Image policy enforcement
 
 ### 🚀 GitOps Evolution
 
-ArgoCD-based Kubernetes delivery model.
+Introduce ArgoCD-based Kubernetes delivery after the CI/CD foundation is stable.
 
