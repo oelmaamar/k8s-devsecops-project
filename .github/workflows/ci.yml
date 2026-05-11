@@ -2,7 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ "deploy-local" ]
+    branches: [ "main" ]
     tags:
       - 'v*'
     # Ignore non-technical files to prevent unnecessary deployments
