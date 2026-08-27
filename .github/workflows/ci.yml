@@ -5,34 +5,28 @@ on:
     branches: [ "main" ]
     tags:
       - 'v*'
-    # Ignore non-technical files to prevent unnecessary deployments
+    # Évite de lancer le workflow si seuls ces fichiers sont modifiés
     paths-ignore:
       - 'README.md'
       - '.gitignore'
-      - 'test.txt'
   pull_request:
     branches:
       - 'main'
-    # Ignore non-technical files to prevent unnecessary deployments
     paths-ignore:
       - 'README.md'
       - '.gitignore'
-      - 'test.txt'
 
 jobs:
   build-and-scan:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # --- 1. STATIC ANALYSIS (SAST) ---
-      # Performs Static Application Security Testing (SAST) using Bandit.
-      # Scans Python source code for common security issues before container build.
-      # Reference: https://github.com/PyCQA/bandit
-    
+    # 1. ------Static Application Security Testing (SAST)---- 
+    # Scan du code source Python pour vulnerabilités avant le build en utilisant  Bandit.
+    # Reference: https://github.com/PyCQA/bandit
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -44,9 +38,8 @@ jobs:
           bandit -r app/ -ll
       
 
-      # --- 2. INFRASTRUCTURE AS CODE SCAN (IaC) ---
-      # Scans Kubernetes manifests for security misconfigurations using Checkov.
-      # Ensures that our K8s deployment follows best practices (e.g., non-root users).
+      # 2. ------ IaC scan -------
+      # scan de  mauvaises configurations de sécurité dans le manifest kub en utilisant Checkov.
       # Documentation: https://github.com/bridgecrewio/checkov-action
 
       - name: Scan K8s Manifests (Checkov)
@@ -54,35 +47,14 @@ jobs:
         with:
           directory: k8s/
           framework: kubernetes
+          # temporaire pour tests continue le pipeline même si detection
           soft_fail: true
 
-      # --- 3. Docker Metadata Extraction ---
-      # Official Action: https://github.com/docker/metadata-action
-      # Used to generate Docker tags and labels based on GitHub identifiers
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: oelmaamar/flask-api
-          tags: |
-            # Tag based on the git branch name
-            type=ref,event=branch 
-            # Tag based on the pull request
-            type=ref,event=pr
-            # Semantic versioning (e.g. v1.2.3)
-            type=semver,pattern={{version}} 
-            # Major and minor versioning (e.g. v1.2)
-            type=semver,pattern={{major}}.{{minor}} 
-            # Short commit SHA for traceability
-            type=sha,format=short,prefix=sha-
-
-      #  --- 4. Set up Docker Buildx ---
+      # 3. --- Docker Buildx ---
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      #  --- 5. Build image locally for scanning (no push) ---
-      # We build and load the image into the runner's local daemon first.
-      # This allows us to scan the actual artifact before publishing it.
+      # 4. ---- Build image localement pour scan (sans push) ---
       - name: Build local image for scanning
         uses: docker/build-push-action@v7
         with:
@@ -90,54 +62,58 @@ jobs:
           file: docker/Dockerfile
           load: true # Exports the build result to the local Docker image store
           tags: oelmaamar/flask-api:local-scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
-      # --- 6. SOFTWARE COMPOSITION ANALYSIS (SCA) ---
-      # Scans the final Docker image for known vulnerabilities (CVEs) in OS packages and libraries before pushing
-      # It will fail the build if CRITICAL vulnerabilities are found.
+      # 5. --- Scan avec Trivy  ---
+      # Scan de l'image Docker avec Trivy pour détecter les CVE critiques
       # Documentation: https://github.com/aquasecurity/trivy-action
 
       - name: Container Scan (Trivy)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: oelmaamar/flask-api:local-scan
-          format: 'table'
-          exit-code: '1' # Stop pipeline only if CRITICAL issues are found
-          ignore-unfixed: true # don't list unfixed issues
-          vuln-type: 'os,library'
+          exit-code: '1' #  Arrête le pipeline si une cve critique est détecté
           severity: 'CRITICAL'
 
-      # --- 7. Login de DockerHub Build & Push ---
+      # 6. ---- Login sur DockerHub & Push ---
       - name: Login to DockerHub
-        if: github.event_name != 'pull_request' # Only login if this is not a pull request
+        if: github.event_name != 'pull_request' # login que si ce n'est pas une PR
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }} # Only push if this is not a pull request
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          
-      # --- 8. DEPLOY (On local k8s cluster) ---       
-      - name: Deploy to Local Cluster
-        if: github.event_name != 'pull_request'
+      - name: push docker image 
+        if: github.event_name != 'pull_request' 
         run: |
-          IMAGE_TAG="${{ fromJson(steps.meta.outputs.json).tags[0] }}"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            IMAGE_TAG="$GITHUB_REF_NAME"
+          else
+            IMAGE_TAG="latest"
+          fi
 
-          kubectl apply -f k8s/namespace.yaml
+          docker tag flask-api:local-scan oelmaamar/flask-api:$IMAGE_TAG
+          docker push oelmaamar/flask-api:$IMAGE_TAG
+          
+      # 7. --- DEPLOY (sur k8s cluster local ) ---       
+  deploy: 
+    needs: build-and-scan
+    runs-on: self-hosted
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to local Cluster
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            IMAGE_TAG="$GITHUB_REF_NAME"
+          else
+            IMAGE_TAG="latest"
+          fi
+
           kubectl apply -f k8s/
 
-          kubectl set image deployment/flask-api flask-api=$IMAGE_TAG -n devsecops
+          kubectl set image deployment/flask-api flask-api=oelmaamar/flask-api:$IMAGE_TAG -n devsecops
 
           kubectl rollout status deployment/flask-api -n devsecops --timeout=120s
-          kubectl get pods -n devsecops
-          kubectl get svc -n devsecops
